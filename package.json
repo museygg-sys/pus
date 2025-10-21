@@ -25,7 +25,7 @@
     "express-session": "^1.17.3",
     "mongodb": "^6.20.0",
     "multer": "^1.4.5-lts.1",
+    "telegram": "^2.26.21",
     "telegraf": "^4.16.3"
-    "telegram": "^2.26.21"
   }
 }
