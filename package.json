@@ -26,5 +26,6 @@
     "mongodb": "^6.20.0",
     "multer": "^1.4.5-lts.1",
     "telegraf": "^4.16.3"
+    "telegram": "^2.26.21"
   }
 }
