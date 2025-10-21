@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration Userbot - Telegram Bot</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .warning-box {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .code-box {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 10px 0;
+      word-break: break-all;
+    }
+    .step-guide {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .step-guide h4 {
+      color: #333;
+      margin-top: 0;
+    }
+    .step-guide ol {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .step-guide li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <%- include('partials/header') %>
+    <%- include('partials/nav') %>
+
+    <div class="section">
+      <h2>🤖 Configuration Userbot Telegram</h2>
+      <p class="subtitle">Configurez votre compte utilisateur Telegram pour le bot</p>
+
+      <div class="warning-box">
+        <strong>⚠️ IMPORTANT :</strong> Cette configuration convertit le bot en <strong>userbot</strong> (compte utilisateur automatisé).
+        <br><br>
+        <strong>Risques :</strong>
+        <ul>
+          <li>❌ Viole techniquement les conditions d'utilisation de Telegram</li>
+          <li>⚠️ Risque de ban du compte si utilisé commercialement</li>
+          <li>🔐 Nécessite un numéro de téléphone réel</li>
+        </ul>
+        <strong>Recommandation :</strong> Utilisez un numéro de téléphone dédié, pas votre numéro principal !
+      </div>
+
+      <div class="step-guide">
+        <h4>📋 Étape 1 : Obtenir API ID et API Hash</h4>
+        <ol>
+          <li>Allez sur <strong><a href="https://my.telegram.org/auth" target="_blank">https://my.telegram.org/auth</a></strong></li>
+          <li>Connectez-vous avec votre numéro de téléphone</li>
+          <li>Cliquez sur "API development tools"</li>
+          <li>Remplissez le formulaire :
+            <ul>
+              <li>App title : <code>My Telegram Bot</code> (ou autre nom)</li>
+              <li>Short name : <code>mybot</code> (ou autre)</li>
+              <li>Platform : <code>Other</code></li>
+            </ul>
+          </li>
+          <li>Vous recevrez <strong>api_id</strong> (nombre) et <strong>api_hash</strong> (texte)</li>
+        </ol>
+      </div>
+
+      <div class="step-guide">
+        <h4>🔐 Étape 2 : Générer la Session String</h4>
+        <ol>
+          <li>Utilisez un générateur de session (ex: <strong><a href="https://tgsnake.js.org/login" target="_blank">https://tgsnake.js.org/login</a></strong>)</li>
+          <li>Entrez votre <strong>api_id</strong> et <strong>api_hash</strong></li>
+          <li>Entrez votre <strong>numéro de téléphone</strong></li>
+          <li>Entrez le <strong>code SMS</strong> reçu</li>
+          <li>Si activé, entrez votre <strong>mot de passe 2FA</strong></li>
+          <li>Copiez la <strong>session string</strong> générée</li>
+        </ol>
+        <p style="color: #666; font-size: 14px; margin-top: 10px;">
+          💡 <strong>Alternative :</strong> Utilisez le script de génération GramJS fourni dans la documentation.
+        </p>
+      </div>
+
+      <form id="userbot-form">
+        <h3>🔑 Credentials Telegram</h3>
+        
+        <div class="form-group">
+          <label for="apiId">API ID *</label>
+          <input type="text" id="apiId" name="apiId" placeholder="123456" value="<%= config.apiId || '' %>" required>
+          <p style="color: #888; font-size: 13px; margin-top: 5px;">
+            Nombre obtenu depuis https://my.telegram.org
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="apiHash">API Hash *</label>
+          <input type="text" id="apiHash" name="apiHash" placeholder="abc123def456..." value="<%= config.apiHash || '' %>" required>
+          <p style="color: #888; font-size: 13px; margin-top: 5px;">
+            Texte obtenu depuis https://my.telegram.org
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber">Numéro de téléphone *</label>
+          <input type="text" id="phoneNumber" name="phoneNumber" placeholder="+33612345678" value="<%= config.phoneNumber || '' %>" required>
+          <p style="color: #888; font-size: 13px; margin-top: 5px;">
+            Format international avec le + (ex: +33612345678)
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="sessionString">Session String *</label>
+          <textarea id="sessionString" name="sessionString" rows="4" placeholder="Votre session string générée..." required><%= config.sessionString || '' %></textarea>
+          <p style="color: #888; font-size: 13px; margin-top: 5px;">
+            ⚠️ <strong>Ne partagez JAMAIS cette session string !</strong> Elle donne accès complet à votre compte Telegram.
+          </p>
+        </div>
+
+        <div class="info-box">
+          <strong>ℹ️ Note :</strong> Après avoir enregistré ces informations, le bot redémarrera automatiquement en mode userbot.
+          <br><br>
+          Le bot utilisera votre compte Telegram pour envoyer et recevoir des messages comme un utilisateur normal.
+        </div>
+
+        <div style="margin-top: 30px;">
+          <button type="submit" class="btn-primary">💾 Enregistrer la configuration</button>
+        </div>
+      </form>
+
+      <div id="userbot-status"></div>
+
+      <% if (config.sessionString) { %>
+      <div class="step-guide" style="margin-top: 40px;">
+        <h4>✅ Configuration actuelle</h4>
+        <p>API ID : <code><%= config.apiId || 'Non configuré' %></code></p>
+        <p>API Hash : <code><%= config.apiHash ? config.apiHash.substring(0, 10) + '...' : 'Non configuré' %></code></p>
+        <p>Téléphone : <code><%= config.phoneNumber || 'Non configuré' %></code></p>
+        <p>Session : <code><%= config.sessionString ? '✅ Configurée' : '❌ Non configurée' %></code></p>
+      </div>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('userbot-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const apiId = document.getElementById('apiId').value.trim();
+      const apiHash = document.getElementById('apiHash').value.trim();
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      const sessionString = document.getElementById('sessionString').value.trim();
+      
+      if (!apiId || !apiHash || !phoneNumber || !sessionString) {
+        alert('Tous les champs sont obligatoires');
+        return;
+      }
+      
+      if (!phoneNumber.startsWith('+')) {
+        alert('Le numéro de téléphone doit commencer par + (format international)');
+        return;
+      }
+      
+      const config = {
+        apiId,
+        apiHash,
+        phoneNumber,
+        sessionString
+      };
+      
+      const statusDiv = document.getElementById('userbot-status');
+      statusDiv.innerHTML = '<p class="loading">⏳ Enregistrement de la configuration userbot...</p>';
+      
+      try {
+        const response = await fetch('/api/userbot-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          statusDiv.innerHTML = '<p class="success">✅ Configuration enregistrée avec succès! Le bot va redémarrer...</p>';
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          statusDiv.innerHTML = `<p class="error">❌ Erreur : ${result.error || 'Erreur lors de l\'enregistrement'}</p>`;
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'enregistrement</p>';
+      }
+    });
+  </script>
+</body>
+</html>

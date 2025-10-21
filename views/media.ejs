@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion des Médias - Telegram Bot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <%- include('partials/header') %>
+    <%- include('partials/nav') %>
+
+    <div class="section">
+      <h2>📤 Upload de Média</h2>
+      <form id="upload-form" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="file">Fichier</label>
+          <input type="file" id="file" name="file" required accept="image/*,video/*,.pdf">
+        </div>
+
+        <div class="form-group">
+          <label for="custom_filename">Nom du fichier (optionnel)</label>
+          <input type="text" id="custom_filename" name="custom_filename" placeholder="Ex: selfie.jpg ou provideo1.mp4">
+          <small>Si vide, un nom automatique sera généré. Extension requise (.jpg, .mp4, etc.)</small>
+        </div>
+
+        <div class="form-group">
+          <label for="category">Catégorie</label>
+          <select id="category" name="category" required>
+            <option value="free">Gratuit (free)</option>
+            <option value="pay">Payant (pay)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="price-group" style="display:none;">
+          <label for="price">Prix (Stars)</label>
+          <input type="number" id="price" name="price" min="1" placeholder="Ex: 50">
+        </div>
+
+        <button type="submit" class="btn-primary">📤 Upload</button>
+      </form>
+      <div id="upload-status"></div>
+    </div>
+
+    <div class="section">
+      <h2>📂 Médias Gratuits</h2>
+      <div class="media-grid">
+        <% if (freeFiles.length === 0) { %>
+          <p class="no-data">Aucun fichier gratuit</p>
+        <% } else { %>
+          <% freeFiles.forEach(file => { %>
+            <div class="media-card">
+              <div class="media-preview">
+                <% if (file.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+                  <img src="/media/preview/free/<%= file %>" alt="<%= file %>">
+                <% } else { %>
+                  <div class="file-icon">📄</div>
+                <% } %>
+              </div>
+              <div class="media-info">
+                <p class="media-name"><%= file %></p>
+                <button onclick="deleteMedia('free', '<%= file %>')" class="btn-delete">🗑️ Supprimer</button>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>💰 Médias Payants</h2>
+      <div class="media-grid">
+        <% if (payFiles.length === 0) { %>
+          <p class="no-data">Aucun fichier payant</p>
+        <% } else { %>
+          <% payFiles.forEach((file, index) => { 
+            const config = mediaConfigs.find(c => c.filename === file);
+            const safeId = 'media-' + index;
+          %>
+            <div class="media-card" data-filename="<%= file %>">
+              <div class="media-preview">
+                <% if (file.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+                  <img src="/media/preview/pay/<%= encodeURIComponent(file) %>" alt="<%= file %>">
+                <% } else { %>
+                  <div class="file-icon">📄</div>
+                <% } %>
+              </div>
+              <div class="media-info">
+                <p class="media-name"><%= file %></p>
+                <div class="price-edit-container">
+                  <% if (config && config.price) { %>
+                    <p class="media-price" id="price-display-<%= safeId %>">⭐ <%= config.price %> Stars</p>
+                  <% } else { %>
+                    <p class="media-price" id="price-display-<%= safeId %>">⭐ Prix non défini</p>
+                  <% } %>
+                  <button onclick="togglePriceEdit('<%= safeId %>')" class="btn-edit">✏️ Éditer</button>
+                </div>
+                <div id="price-edit-form-<%= safeId %>" style="display:none;" class="price-edit-form">
+                  <input type="number" id="price-input-<%= safeId %>" min="1" max="100000" placeholder="Prix (Stars)" value="<%= config && config.price ? config.price : '' %>">
+                  <button onclick="updatePrice('<%= safeId %>')" class="btn-save">💾 Sauvegarder</button>
+                  <button onclick="togglePriceEdit('<%= safeId %>')" class="btn-cancel">❌ Annuler</button>
+                </div>
+                <button onclick="deleteMedia('pay', '<%= encodeURIComponent(file) %>')" class="btn-delete">🗑️ Supprimer</button>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('category').addEventListener('change', function() {
+      const priceGroup = document.getElementById('price-group');
+      if (this.value === 'pay') {
+        priceGroup.style.display = 'block';
+        document.getElementById('price').required = true;
+      } else {
+        priceGroup.style.display = 'none';
+        document.getElementById('price').required = false;
+      }
+    });
+
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const statusDiv = document.getElementById('upload-status');
+      
+      statusDiv.innerHTML = '<p class="loading">Upload en cours...</p>';
+      
+      try {
+        const response = await fetch('/api/upload-media', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          statusDiv.innerHTML = '<p class="success">✅ Fichier uploadé avec succès!</p>';
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          statusDiv.innerHTML = '<p class="error">❌ Erreur: ' + result.error + '</p>';
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'upload</p>';
+      }
+    });
+
+    async function deleteMedia(category, filename) {
+      if (!confirm('Voulez-vous vraiment supprimer ce fichier?')) return;
+      
+      try {
+        const response = await fetch(`/api/media/${category}/${filename}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erreur lors de la suppression');
+        }
+      } catch (error) {
+        alert('Erreur lors de la suppression');
+      }
+    }
+
+    function togglePriceEdit(safeId) {
+      const form = document.getElementById(`price-edit-form-${safeId}`);
+      const display = document.getElementById(`price-display-${safeId}`);
+      const container = display.parentElement;
+      
+      if (form.style.display === 'none') {
+        form.style.display = 'flex';
+        container.querySelector('.btn-edit').style.display = 'none';
+      } else {
+        form.style.display = 'none';
+        container.querySelector('.btn-edit').style.display = 'inline-block';
+      }
+    }
+
+    async function updatePrice(safeId) {
+      const input = document.getElementById(`price-input-${safeId}`);
+      const card = input.closest('.media-card');
+      const filename = card.getAttribute('data-filename');
+      const price = Number(input.value);
+      
+      if (!Number.isInteger(price) || price < 1 || price > 100000) {
+        alert('Veuillez entrer un prix valide (entre 1 et 100000 Stars)');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/media-price/${encodeURIComponent(filename)}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ price: price })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert('Erreur: ' + (result.error || 'Mise à jour échouée'));
+        }
+      } catch (error) {
+        alert('Erreur lors de la mise à jour du prix');
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>

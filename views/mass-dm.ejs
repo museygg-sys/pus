@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mass DM - Telegram Bot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <%- include('partials/header') %>
+    <%- include('partials/nav') %>
+
+    <div class="section">
+      <h2>📨 Envoyer un Message en Masse</h2>
+      
+      <form id="mass-dm-form" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Sélectionner les destinataires</label>
+          <div class="user-selection">
+            <button type="button" onclick="selectAll()" class="btn-secondary">✅ Tout sélectionner</button>
+            <button type="button" onclick="deselectAll()" class="btn-secondary">❌ Tout désélectionner</button>
+          </div>
+          <div class="users-list-mass">
+            <% users.forEach(user => { %>
+              <label class="user-checkbox">
+                <input type="checkbox" name="userIds" value="<%= user.userId %>">
+                <span>User ID: <%= user.userId %> (<%= user.messageCount %> messages)</span>
+              </label>
+            <% }); %>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="messageType">Type de message principal</label>
+          <select id="messageType" name="messageType" onchange="updateFormFields()">
+            <option value="text">📝 Texte seulement</option>
+            <option value="photo">📷 Photo avec texte</option>
+            <option value="video">🎥 Vidéo avec texte</option>
+          </select>
+        </div>
+
+        <div id="text-fields">
+          <div class="form-group">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="6" placeholder="Écrivez votre message ici..."></textarea>
+          </div>
+        </div>
+
+        <div id="media-fields" style="display: none;">
+          <div class="form-group">
+            <label for="mediaFile">Fichier média (Photo ou Vidéo)</label>
+            <input type="file" id="mediaFile" name="mediaFile" accept="image/*,video/*">
+          </div>
+          <div class="form-group">
+            <label for="mediaCaption">Légende (optionnel)</label>
+            <textarea id="mediaCaption" name="message" rows="3" placeholder="Ajoutez une légende à votre média..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem; padding: 1rem; border: 2px dashed #666; border-radius: 8px;">
+          <label>
+            <input type="checkbox" id="includeInvoice" name="includeInvoice" onchange="toggleInvoiceFields()">
+            <strong>💰 Ajouter une facture à ce message</strong>
+          </label>
+          <small style="display: block; margin-top: 0.5rem; color: #888;">
+            La facture sera envoyée après le message principal
+          </small>
+        </div>
+
+        <div id="invoice-fields" style="display: none;">
+          <div class="form-group">
+            <label for="invoiceTitle">Titre de la facture</label>
+            <input type="text" id="invoiceTitle" name="invoiceTitle" placeholder="Ex: Contenu Premium">
+          </div>
+          <div class="form-group">
+            <label for="invoiceDescription">Description</label>
+            <textarea id="invoiceDescription" name="invoiceDescription" rows="3" placeholder="Décrivez ce que l'utilisateur va recevoir..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="invoicePrice">Prix (Telegram Stars)</label>
+            <input type="number" id="invoicePrice" name="invoicePrice" min="1" placeholder="50" value="50">
+            <small>Note: 1 Telegram Star ≈ 0.02 USD</small>
+          </div>
+          <div class="form-group">
+            <label for="invoiceContentFile">Fichier à envoyer après paiement</label>
+            <input type="file" id="invoiceContentFile" name="invoiceContentFile">
+            <small>Ce fichier sera envoyé à l'utilisateur une fois qu'il aura payé la facture</small>
+          </div>
+          <div class="form-group">
+            <label for="invoiceContentCaption">Message avec le contenu (optionnel)</label>
+            <textarea id="invoiceContentCaption" name="invoiceContentCaption" rows="2" placeholder="Message à envoyer avec le contenu après paiement..."></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">📨 Envoyer</button>
+      </form>
+
+      <div id="send-status"></div>
+    </div>
+  </div>
+
+  <script>
+    function selectAll() {
+      document.querySelectorAll('input[name="userIds"]').forEach(cb => cb.checked = true);
+    }
+
+    function deselectAll() {
+      document.querySelectorAll('input[name="userIds"]').forEach(cb => cb.checked = false);
+    }
+
+    function toggleInvoiceFields() {
+      const includeInvoice = document.getElementById('includeInvoice').checked;
+      const invoiceFields = document.getElementById('invoice-fields');
+      invoiceFields.style.display = includeInvoice ? 'block' : 'none';
+      
+      document.getElementById('invoiceTitle').required = includeInvoice;
+      document.getElementById('invoiceDescription').required = includeInvoice;
+      document.getElementById('invoicePrice').required = includeInvoice;
+      document.getElementById('invoiceContentFile').required = includeInvoice;
+    }
+
+    function updateFormFields() {
+      const messageType = document.getElementById('messageType').value;
+      const textFields = document.getElementById('text-fields');
+      const mediaFields = document.getElementById('media-fields');
+      const mediaFileInput = document.getElementById('mediaFile');
+
+      textFields.style.display = 'none';
+      mediaFields.style.display = 'none';
+
+      document.getElementById('message').required = false;
+      mediaFileInput.required = false;
+      mediaFileInput.value = '';
+
+      if (messageType === 'text') {
+        textFields.style.display = 'block';
+        document.getElementById('message').required = true;
+      } else if (messageType === 'photo') {
+        mediaFields.style.display = 'block';
+        mediaFileInput.required = true;
+        mediaFileInput.accept = 'image/*';
+      } else if (messageType === 'video') {
+        mediaFields.style.display = 'block';
+        mediaFileInput.required = true;
+        mediaFileInput.accept = 'video/*';
+      }
+    }
+
+    document.getElementById('mass-dm-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const checkboxes = document.querySelectorAll('input[name="userIds"]:checked');
+      const userIds = Array.from(checkboxes).map(cb => cb.value);
+      const messageType = document.getElementById('messageType').value;
+      const includeInvoice = document.getElementById('includeInvoice').checked;
+      
+      if (userIds.length === 0) {
+        alert('Veuillez sélectionner au moins un utilisateur');
+        return;
+      }
+
+      if ((messageType === 'photo' || messageType === 'video') && !document.getElementById('mediaFile').files[0]) {
+        alert('Veuillez sélectionner un fichier média');
+        return;
+      }
+
+      if (messageType === 'photo') {
+        const file = document.getElementById('mediaFile').files[0];
+        if (file && !file.type.startsWith('image/')) {
+          alert('Veuillez sélectionner une image pour le type "Photo"');
+          return;
+        }
+      }
+
+      if (messageType === 'video') {
+        const file = document.getElementById('mediaFile').files[0];
+        if (file && !file.type.startsWith('video/')) {
+          alert('Veuillez sélectionner une vidéo pour le type "Vidéo"');
+          return;
+        }
+      }
+
+      if (includeInvoice && !document.getElementById('invoiceContentFile').files[0]) {
+        alert('Veuillez sélectionner un fichier à envoyer après paiement de la facture');
+        return;
+      }
+
+      let confirmMessage = `Envoyer ce ${messageType === 'text' ? 'message' : 'média'} à ${userIds.length} utilisateur(s)?`;
+      if (includeInvoice) {
+        confirmMessage += '\n+ Facture attachée';
+      }
+      if (!confirm(confirmMessage)) return;
+      
+      const statusDiv = document.getElementById('send-status');
+      statusDiv.innerHTML = '<p class="loading">Envoi en cours...</p>';
+      
+      try {
+        const formData = new FormData();
+        formData.append('userIds', JSON.stringify(userIds));
+        formData.append('messageType', messageType);
+        formData.append('includeInvoice', includeInvoice);
+
+        if (messageType === 'text') {
+          formData.append('message', document.getElementById('message').value);
+        } else if (messageType === 'photo' || messageType === 'video') {
+          const mediaFile = document.getElementById('mediaFile').files[0];
+          if (mediaFile) {
+            formData.append('mediaFile', mediaFile);
+          }
+          formData.append('message', document.getElementById('mediaCaption').value || '');
+        }
+
+        if (includeInvoice) {
+          formData.append('invoiceTitle', document.getElementById('invoiceTitle').value);
+          formData.append('invoiceDescription', document.getElementById('invoiceDescription').value);
+          formData.append('invoicePrice', document.getElementById('invoicePrice').value);
+          formData.append('invoiceContentCaption', document.getElementById('invoiceContentCaption').value || '');
+          
+          const invoiceFile = document.getElementById('invoiceContentFile').files[0];
+          if (invoiceFile) {
+            formData.append('invoiceContentFile', invoiceFile);
+          }
+        }
+
+        const response = await fetch('/api/send-mass-dm', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          statusDiv.innerHTML = `<p class="success">✅ Messages envoyés! Succès: ${result.successCount}, Échecs: ${result.failCount}</p>`;
+          document.getElementById('mass-dm-form').reset();
+          deselectAll();
+          updateFormFields();
+          toggleInvoiceFields();
+        } else {
+          statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'envoi</p>';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'envoi</p>';
+      }
+    });
+
+    updateFormFields();
+  </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Message Épinglé - Telegram Bot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <%- include('partials/header') %>
+    <%- include('partials/nav') %>
+
+    <div class="section">
+      <h2>📌 Message Épinglé</h2>
+      <p class="subtitle">Ce message sera affiché en haut des conversations</p>
+
+      <% if (pinnedMessage) { %>
+        <div class="pinned-display">
+          <strong>Message actuel:</strong>
+          <p><%= pinnedMessage.message %></p>
+          <small>Créé le: <%= new Date(pinnedMessage.createdAt).toLocaleString('fr-FR') %></small>
+          <br><br>
+          <button onclick="sendToAllUsers()" class="btn-primary" style="background-color: #28a745;">
+            📤 Envoyer à tous les utilisateurs
+          </button>
+        </div>
+        <div id="send-status"></div>
+      <% } else { %>
+        <p class="no-data">Aucun message épinglé pour le moment</p>
+      <% } %>
+
+      <form id="pinned-form">
+        <div class="form-group">
+          <label for="message">Nouveau Message Épinglé</label>
+          <textarea id="message" name="message" required rows="4" placeholder="Entrez le message à épingler..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary">📌 Épingler</button>
+      </form>
+
+      <div id="pin-status"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('pinned-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const message = document.getElementById('message').value;
+      const statusDiv = document.getElementById('pin-status');
+      
+      statusDiv.innerHTML = '<p class="loading">Enregistrement...</p>';
+      
+      try {
+        const response = await fetch('/api/pinned-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          statusDiv.innerHTML = '<p class="success">✅ Message épinglé avec succès!</p>';
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'enregistrement</p>';
+        }
+      } catch (error) {
+        statusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'enregistrement</p>';
+      }
+    });
+
+    async function sendToAllUsers() {
+      const sendStatusDiv = document.getElementById('send-status');
+      
+      if (!confirm('Voulez-vous vraiment envoyer ce message épinglé à tous les utilisateurs ?')) {
+        return;
+      }
+      
+      sendStatusDiv.innerHTML = '<p class="loading">📤 Envoi en cours à tous les utilisateurs...</p>';
+      
+      try {
+        const response = await fetch('/api/send-pinned-to-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          sendStatusDiv.innerHTML = `<p class="success">✅ ${result.message}</p>`;
+        } else {
+          sendStatusDiv.innerHTML = `<p class="error">❌ ${result.error || 'Erreur lors de l\'envoi'}</p>`;
+        }
+      } catch (error) {
+        sendStatusDiv.innerHTML = '<p class="error">❌ Erreur lors de l\'envoi du message</p>';
+      }
+    }
+  </script>
+</body>
+</html>
